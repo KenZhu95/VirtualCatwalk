@@ -13,6 +13,119 @@ namespace {
 	// FIXME: Implement a function that performs proper
 	//        ray-cylinder intersection detection
 	// TIPS: The implement is provided by the ray-tracer starter code.
+
+	const double RAY_EPSILON = 0.00000001;
+
+	bool intersectCylinder(const glm::vec3& origin, const glm::vec3& direction, 
+	float height, float radius, float* t){
+		if (intersectCaps(origin, direction, height, radius, t)){
+			float tt;
+			if (intersectBody(origin, direction, height, radius, &tt)){
+				if (tt < (*t)){
+					*t = tt;
+				}
+			}
+			return true;
+		} else {
+			return intersectBody(origin, direction, height, radius, t)
+		}
+	}
+
+	bool intersectBody(const glm::vec3& origin, const glm::vec3& direction, 
+	float height, float radius, float* t){
+		double x0 = origin[0];
+		double z0 = origin[2];
+		double x1 = direction[0];
+		double z1 = direction[2];
+
+		double a = x1*x1 + z1*z1;
+		double b = 2.0*(x0*x1 + z0*z1);
+		double c = x0*x0 + z0*z0 - radius * radius;
+
+		if( 0.0 == a ) {
+			// This implies that x1 = 0.0 and y1 = 0.0, which further
+			// implies that the ray is aligned with the body of the cylinder,
+			// so no intersection.
+			return false;
+		}
+
+		double discriminant = b*b - 4.0*a*c;
+
+		if( discriminant < 0.0 ) {
+			return false;
+		}
+		
+		discriminant = sqrt( discriminant );
+
+		double t2 = (-b + discriminant) / (2.0 * a);
+
+		if( t2 <= RAY_EPSILON ) {
+			return false;
+		}
+
+		double t1 = (-b - discriminant) / (2.0 * a);
+
+		if (t1 > RAY_EPSILON){
+			//Two intersections.
+			glm::vec3 P = origin + t1 * direction;
+			double y = P[1];
+			if (y >= 0.0 && y <= height){
+				//It's okay.
+				*t = t1;
+				return true;
+			}
+		}
+
+		glm::vec3 P = origin + t2 * direction;
+		double y = P[1];
+		if (y >= 0.0 && y <= height){
+			*t = t2;
+			return true;
+		}
+	}
+
+	bool intersectCaps(const glm::vec3& origin, const glm::vec3& direction, 
+	float height, float radius, float* t){
+		double oy = origin[1];
+		double dy = direction[1];
+
+		if (0.0 == dy){
+			return false;
+		}
+
+		double t1;
+		double t2;
+
+		if (dy > 0.0){
+			t1 = (-oy)/dy;
+			t2 = (1.0-oy)/dy;
+		} else {
+			t1 = (1.0-oy)/dy;
+			t2 = (-oy)/dy;
+		}
+
+		if (t2 < RAY_EPSILON){
+			return false;
+		}
+
+		if (t1 >= RAY_EPSILON){
+			glm::vec3 p = origin + t1 * direction;
+			if ((p[0]*p[0] + p[2]*p[2]) <= 1.0){
+				*t = t1;
+				return true;
+			}
+		}
+
+
+		glm::vec3 p = origin + t2 * direction;
+		if ((p[0]*p[0] + p[2]*p[2]) <= 1.0){
+			*t = t2;
+			return true;
+		}
+
+		return false;
+
+	}
 }
 
 GUI::GUI(GLFWwindow* window)
