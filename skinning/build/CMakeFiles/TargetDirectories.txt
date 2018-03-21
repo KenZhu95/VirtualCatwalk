@@ -1,0 +1,7 @@
+/mnt/c/CG/Projects/Skin/skinning/build/CMakeFiles/edit_cache.dir
+/mnt/c/CG/Projects/Skin/skinning/build/CMakeFiles/rebuild_cache.dir
+/mnt/c/CG/Projects/Skin/skinning/build/CMakeFiles/pmdreader.dir
+/mnt/c/CG/Projects/Skin/skinning/build/CMakeFiles/utgraphicsutil.dir
+/mnt/c/CG/Projects/Skin/skinning/build/src/CMakeFiles/rebuild_cache.dir
+/mnt/c/CG/Projects/Skin/skinning/build/src/CMakeFiles/edit_cache.dir
+/mnt/c/CG/Projects/Skin/skinning/build/src/CMakeFiles/skinning.dir
