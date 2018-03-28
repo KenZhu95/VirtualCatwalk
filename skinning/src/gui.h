@@ -41,6 +41,7 @@ public:
 	bool setCurrentBone(int i);
 
 	bool isTransparent() const { return transparent_; }
+	float vector_2d_angle(glm::vec2 a, glm::vec2 b);
 private:
 	GLFWwindow* window_;
 	Mesh* mesh_;
@@ -51,6 +52,7 @@ private:
 	bool fps_mode_ = false;
 	bool pose_changed_ = true;
 	bool transparent_ = false;
+	bool translation_mode_ = false;
 	int current_bone_ = -1;
 	int current_button_ = -1;
 	float roll_speed_ = M_PI / 64.0f;

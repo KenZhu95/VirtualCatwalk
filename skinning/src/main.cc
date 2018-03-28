@@ -50,6 +50,14 @@ const char* bone_fragment_shader =
 #include "shaders/bone.frag"
 ;
 
+const char* cylinder_vertex_shader =
+#include "shaders/cylinder.vert"
+;
+
+const char* cylinder_fragment_shader =
+#include "shaders/cylinder.frag"
+;
+
 // FIXME: Add more shaders here.
 
 void ErrorCallback(int error, const char* description) {
@@ -154,6 +162,10 @@ int main(int argc, char* argv[])
 		// std::cerr << "Trans Binder: " << mesh.getNumberOfBones() << std::endl;
 		glUniform3fv(loc, mesh.getNumberOfBones(), (const GLfloat*)data);
 	};
+	auto joint_init_trans_binder = [&mesh](int loc, const void *data) {
+		// std::cerr << "Trans Binder: " << mesh.getNumberOfBones() << std::endl;
+		glUniform3fv(loc, mesh.getNumberOfBones(), (const GLfloat*)data);
+	};
 	auto joint_rot_binder = [&mesh](int loc, const void *data) {
 		glUniform4fv(loc, mesh.getNumberOfBones(), (const GLfloat*)data);
 	};
@@ -192,11 +204,29 @@ int main(int argc, char* argv[])
 		auto ret = mesh.skeleton.collectJointTrans();
 		return ret;
 	};
+	auto joint_init_trans_data = [&mesh]() -> const void* {
+		auto ret = mesh.skeleton.collectJointInitTrans();
+		return ret;
+	};
 	auto joint_rot_data = [&mesh]() -> const void* {
 		return mesh.skeleton.collectJointRot();
 	};
 	// FIXME: add more lambdas for data_source if you want to use RenderPass.
 	//        Otherwise, do whatever you like here
+
+	auto bone_transform_data = [&mesh, &gui]() -> const void* {
+		auto bone_transform_matrix = mesh.skeleton.getBoneTransform(gui.getCurrentBone());
+		return &bone_transform_matrix[0][0];
+	};
+
+	auto radius_data = [&kCylinderRadius]() -> const void* {
+		return &kCylinderRadius;
+	};
+
+	// auto length_data = [&mesh, &gui]() -> const void* {
+	// 	float length =  mesh.skeleton.getBone(gui.getCurrentBone())->length;
+	// 	return length;
+	// };
 
 	ShaderUniform std_model = { "model", matrix_binder, std_model_data };
 	ShaderUniform floor_model = { "model", matrix_binder, floor_model_data };
@@ -206,7 +236,11 @@ int main(int argc, char* argv[])
 	ShaderUniform std_light = { "light_position", vector_binder, std_light_data };
 	ShaderUniform object_alpha = { "alpha", float_binder, alpha_data };
 	ShaderUniform joint_trans = { "joint_trans", joint_trans_binder, joint_trans_data };
+	ShaderUniform joint_init_trans = { "joint_init_trans", joint_init_trans_binder, joint_init_trans_data };
 	ShaderUniform joint_rot = { "joint_rot", joint_rot_binder, joint_rot_data };
+	ShaderUniform bone_transform = { "bone_transform", matrix_binder, bone_transform_data };
+	ShaderUniform cylinder_radius = { "radius", float_binder, radius_data };
+	// ShaderUniform cylinder_length = { "length", float_binder, length_data };
 	// FIXME: define more ShaderUniforms for RenderPass if you want to use it.
 	//        Otherwise, do whatever you like here
 
@@ -247,7 +281,7 @@ int main(int argc, char* argv[])
 			{ std_model, std_view, std_proj,
 			  std_light,
 			  std_camera, object_alpha,
-			  joint_trans, joint_rot
+			  joint_trans, joint_rot, joint_init_trans
 			},
 			{ "fragment_color" }
 			);
@@ -269,13 +303,24 @@ int main(int argc, char* argv[])
 	bone_pass_input.assign(0, "jid", bone_vertex_id.data(), bone_vertex_id.size(), 1, GL_UNSIGNED_INT);
 	bone_pass_input.assignIndex(bone_indices.data(), bone_indices.size(), 2);
 	RenderPass bone_pass(-1, bone_pass_input,
-			{ bone_vertex_shader, nullptr, bone_fragment_shader},
+			{ bone_vertex_shader, nullptr, bone_fragment_shader },
 			{ std_model, std_view, std_proj, joint_trans },
 			{ "fragment_color" }
 			);
 
 	// FIXME: Create the RenderPass objects for bones here.
 	//        Otherwise do whatever you like.
+
+	//RenderPass object for cylinder
+	RenderDataInput cylinder_pass_input;
+	cylinder_pass_input.assign(0, "vertex_position", cylinder_mesh.vertices.data(), cylinder_mesh.vertices.size(), 4, GL_FLOAT);
+	cylinder_pass_input.assignIndex(cylinder_mesh.indices.data(), cylinder_mesh.indices.size(), 2);
+	RenderPass cylinder_pass(-1, cylinder_pass_input,
+			{ cylinder_vertex_shader, nullptr, cylinder_fragment_shader },
+			{ std_model, std_view, std_proj, bone_transform, cylinder_radius },
+			{ "fragment_color" }
+			);
+
 
 	float aspect = 0.0f;
 	std::cout << "center = " << mesh.getCenter() << "\n";
@@ -320,6 +365,14 @@ int main(int argc, char* argv[])
 			                              GL_UNSIGNED_INT, 0));
 		}
 		draw_cylinder = (current_bone != -1 && gui.isTransparent());
+
+		//Then draw cylinders.
+		if (draw_cylinder && gui.isTransparent()) {
+			cylinder_pass.setup();
+			CHECK_GL_ERROR(glDrawElements(GL_LINES,
+                              cylinder_mesh.indices.size() * 2,
+                              GL_UNSIGNED_INT, 0));
+		}
 
 		// Then draw floor.
 		if (draw_floor) {
